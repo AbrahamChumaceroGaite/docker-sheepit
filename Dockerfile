@@ -46,7 +46,7 @@ RUN mkdir -p /sheep/cache
 
 ENV user_name "zocker_160"
 ENV user_password "Re85CqEhKAx937dXP19wRf2yRkvAIBemYIVhVaAx"
-ENV cpu "0"
+ENV cpu "24"
 ENV gpu "all"
 ENV ui "text"
 

@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+FROM eclipse-temurin:11-jre
 #based on Ubuntu 24.04 LTS as of 06.08.2024
 
 MAINTAINER zocker-160

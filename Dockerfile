@@ -1,37 +1,87 @@
-FROM ubuntu:rolling
-EXPOSE 3389/tcp
-ARG USER=test
-ARG PASS=1234
-ARG X11Forwarding=false
+FROM ubuntu:20.04
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-        apt-get install -y ubuntu-desktop-minimal dbus-x11 xrdp sudo; \
-    [ $X11Forwarding = 'true' ] && apt-get install -y openssh-server; \
-    apt-get autoremove --purge; \
-    apt-get clean; \
-    rm /run/reboot-required*
-RUN useradd -s /bin/bash -m $USER -p $(openssl passwd "$PASS"); \
-    usermod -aG sudo $USER; \
-    adduser xrdp ssl-cert; \
-    # Setting the required environment variables
-    echo 'LANG=en_US.UTF-8' >> /etc/default/locale; \
-    echo 'export GNOME_SHELL_SESSION_MODE=ubuntu' > /home/$USER/.xsessionrc; \
-    echo 'export XDG_CURRENT_DESKTOP=ubuntu:GNOME' >> /home/$USER/.xsessionrc; \
-    echo 'export XDG_SESSION_TYPE=x11' >> /home/$USER/.xsessionrc; \
-    # Enabling log to the stdout
-    sed -i "s/#EnableConsole=false/EnableConsole=true/g" /etc/xrdp/xrdp.ini; \
-    # Disabling system animations and reducing the
-    # image quality to improve the performance
-    sed -i 's/max_bpp=32/max_bpp=16/g' /etc/xrdp/xrdp.ini; \
-    gsettings set org.gnome.desktop.interface enable-animations true; \
-    # Listening on wildcard address for X forwarding
-    [ $X11Forwarding = 'true' ] && \
-        sed -i 's/#X11UseLocalhost yes/X11UseLocalhost no/g' /etc/ssh/sshd_config || \
-        :;
+# prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
 
-CMD rm -f /var/run/xrdp/xrdp*.pid >/dev/null 2>&1; \
-    service dbus restart >/dev/null 2>&1; \
-    /usr/lib/systemd/systemd-logind >/dev/null 2>&1 & \
-    [ -f /usr/sbin/sshd ] && /usr/sbin/sshd; \
-    xrdp-sesman --config /etc/xrdp/sesman.ini; \
-    xrdp --nodaemon --config /etc/xrdp/xrdp.ini
+# update dependencies
+RUN apt update
+RUN apt upgrade -y
+
+# install xfce desktop
+RUN apt install -y xfce4 xfce4-goodies
+
+# install dependencies
+RUN apt install -y \
+  tightvncserver \
+  novnc \
+  net-tools \
+  nano \
+  vim \
+  neovim \
+  curl \
+  wget \
+  firefox \
+  git \
+  python3 \
+  python3-pip
+
+# xfce fixes
+RUN update-alternatives --set x-terminal-emulator /usr/bin/xfce4-terminal.wrapper
+
+# setup Chromium
+RUN git clone https://github.com/scheib/chromium-latest-linux.git /chromium
+RUN /chromium/update.sh
+
+# VNC and noVNC config
+ARG USER=root
+ENV USER=${USER}
+
+ARG VNCPORT=3389
+ENV VNCPORT=${VNCPORT}
+EXPOSE ${VNCPORT}
+
+ARG NOVNCPORT=9090
+ENV NOVNCPORT=${NOVNCPORT}
+EXPOSE ${NOVNCPORT}
+
+ARG VNCPWD=changeme
+ENV VNCPWD=${VNCPWD}
+
+ARG VNCDISPLAY=1920x1080
+ENV VNCDISPLAY=${VNCDISPLAY}
+
+ARG VNCDEPTH=16
+ENV VNCDEPTH=${VNCDEPTH}
+
+# setup VNC
+RUN mkdir -p /root/.vnc/
+RUN echo ${VNCPWD} | vncpasswd -f > /root/.vnc/passwd
+RUN chmod 600 /root/.vnc/passwd
+RUN echo "#!/bin/sh \n\
+xrdb $HOME/.Xresources \n\
+xsetroot -solid grey \n\
+#x-terminal-emulator -geometry 80x24+10+10 -ls -title "$VNCDESKTOP Desktop" & \n\
+#x-window-manager & \n\
+# Fix to make GNOME work \n\
+export XKL_XMODMAP_DISABLE=1 \n\
+/etc/X11/Xsession \n\
+startxfce4 & \n\
+" > /root/.vnc/xstartup
+RUN chmod +x /root/.vnc/xstartup
+
+# setup noVNC
+RUN openssl req -new -x509 -days 365 -nodes \
+  -subj "/C=US/ST=IL/L=Springfield/O=OpenSource/CN=localhost" \
+  -out /etc/ssl/certs/novnc_cert.pem -keyout /etc/ssl/private/novnc_key.pem \
+  > /dev/null 2>&1
+RUN cat /etc/ssl/certs/novnc_cert.pem /etc/ssl/private/novnc_key.pem \
+  > /etc/ssl/private/novnc_combined.pem
+RUN chmod 600 /etc/ssl/private/novnc_combined.pem
+
+ENTRYPOINT [ "/bin/bash", "-c", " \
+  echo 'NoVNC Certificate Fingerprint:'; \
+  openssl x509 -in /etc/ssl/certs/novnc_cert.pem -noout -fingerprint -sha256; \
+  vncserver :0 -rfbport ${VNCPORT} -geometry $VNCDISPLAY -depth $VNCDEPTH -localhost; \
+  /usr/share/novnc/utils/launch.sh --listen $NOVNCPORT --vnc localhost:$VNCPORT \
+    --cert /etc/ssl/private/novnc_combined.pem \
+" ]

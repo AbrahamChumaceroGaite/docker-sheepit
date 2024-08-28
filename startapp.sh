@@ -28,6 +28,6 @@ else
         java -jar /sheep/sheepit-client.jar -cache-dir /sheep/cache -cores $cpu -login $user_name -password $user_password -ui $ui "$@"
     else
         echo "running in GPU mode"
-        java -jar /sheep/sheepit-client.jar -cache-dir /sheep/cache -cores $cpu -compute-method GPU -gpu $gpu -login $user_name -password $user_password -ui $ui "$@"
+        java -jar /sheep/sheepit-client.jar -cache-dir /sheep/cache -compute-method GPU -gpu $gpu -login $user_name -password $user_password -ui $ui "$@"
     fi
 fi

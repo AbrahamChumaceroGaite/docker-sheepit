@@ -1,5 +1,4 @@
 FROM eclipse-temurin:11-jre
-#based on Ubuntu 24.04 LTS as of 06.08.2024
 
 MAINTAINER zocker-160
 
@@ -10,7 +9,6 @@ ENV NVIDIA_DRIVER_CAPABILITIES all
 RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends curl \
-    # Blender dependencies
     libxi6 \
     libxrender1 \
     libglu1-mesa \
@@ -20,7 +18,6 @@ RUN \
     libxxf86vm1 \
     libxkbcommon0 \
     libsm6 \
-    # some useful utils
     xz-utils \
     ncat \
     screen \
@@ -44,8 +41,9 @@ RUN chmod +x /startapp.sh
 
 RUN mkdir -p /sheep/cache
 
-ENV user_name "zocker_160"
-ENV user_password "Re85CqEhKAx937dXP19wRf2yRkvAIBemYIVhVaAx"
+# Variables de entorno para el cliente SheepIt
+ENV user_name "<username>"
+ENV user_password "<password_or_public_key>"
 ENV cpu "0"
 ENV gpu "OPTIX_0"
 ENV ui "text"

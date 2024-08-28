@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  wppbot:
+    build: .
+    ports:
+      - "1237:3000"   
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: sh -c "nvidia-smi && npm run start"

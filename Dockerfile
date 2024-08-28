@@ -47,7 +47,7 @@ RUN mkdir -p /sheep/cache
 ENV user_name "zocker_160"
 ENV user_password "Re85CqEhKAx937dXP19wRf2yRkvAIBemYIVhVaAx"
 ENV cpu "24"
-ENV gpu "all"
+ENV gpu "OPTIX_0 "
 ENV ui "text"
 
 ENTRYPOINT ["/startapp.sh"]
